@@ -1,0 +1,108 @@
+name: Build and Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, with or without a leading v (e.g. 0.1.0)"
+        required: true
+      dry_run:
+        description: "Build and package only, do not create a release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cheap gate: never download ~1.9 GB to discover a version typo.
+      - name: Resolve and verify version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW="${{ inputs.version }}"
+          else
+            RAW="${GITHUB_REF_NAME}"
+          fi
+          VERSION="${RAW#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+            echo "Version '$VERSION' is not x.y.z" >&2; exit 1; }
+
+          SOURCE="$(grep -oP 'public const string Version = "\K[^"]+' src/vein_mining.cs)"
+          MANIFEST="$(python3 -c "import json;print(json.load(open('resources/manifest.json',encoding='utf-8-sig'))['version_number'])")"
+          CHANGELOG="$(grep -m1 -oP '^## \K[0-9]+\.[0-9]+\.[0-9]+' resources/CHANGELOG.md)"
+
+          echo "plugin=$SOURCE manifest=$MANIFEST changelog=$CHANGELOG requested=$VERSION"
+          [ "$SOURCE" = "$VERSION" ] || { echo "plugin Version disagrees" >&2; exit 1; }
+          [ "$MANIFEST" = "$VERSION" ] || { echo "manifest version_number disagrees" >&2; exit 1; }
+          [ "$CHANGELOG" = "$VERSION" ] || { echo "CHANGELOG heading disagrees" >&2; exit 1; }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Fetch game and dependency references
+        run: ./tooling/ci-fetch-refs.sh
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          VALHEIM_DIR="$PWD/refs/game" BEPINEX_DIR="$PWD/refs/game/BepInEx" ./tooling/build.sh
+          cat artifacts/debug/build-info.txt
+
+      - name: Package
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          ZIP="MineTogether-v${VERSION}.zip"
+          VERSION="$VERSION" ZIP="$ZIP" python3 - <<'PY'
+          import os, zipfile
+          version, name = os.environ["VERSION"], os.environ["ZIP"]
+          with zipfile.ZipFile(name, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+              z.write("artifacts/debug/MineTogether.dll", "MineTogether.dll")
+              for asset in ("manifest.json", "README.md", "CHANGELOG.md", "icon.png"):
+                  z.write(f"resources/{asset}", asset)
+          print(f"packaged {name} ({os.path.getsize(name)} bytes) for {version}")
+          PY
+          sha256sum "$ZIP" > "MineTogether-v${VERSION}-CHECKSUMS.txt"
+          cat "MineTogether-v${VERSION}-CHECKSUMS.txt"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MineTogether-v${{ steps.version.outputs.version }}
+          path: |
+            MineTogether-v${{ steps.version.outputs.version }}.zip
+            MineTogether-v${{ steps.version.outputs.version }}-CHECKSUMS.txt
+          if-no-files-found: error
+
+      - name: Publish release
+        if: github.event_name == 'push' || inputs.dry_run == false
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Mine Together ${{ steps.version.outputs.version }}
+          prerelease: true
+          files: |
+            MineTogether-v${{ steps.version.outputs.version }}.zip
+            MineTogether-v${{ steps.version.outputs.version }}-CHECKSUMS.txt
+          fail_on_unmatched_files: true
+          overwrite_files: true
