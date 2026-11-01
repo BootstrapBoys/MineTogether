@@ -58,8 +58,9 @@ BEPINEX_CORE="$(dirname "$HARMONY")"
 echo "BepInEx core: ${BEPINEX_CORE#$WORK/}"
 cp "$BEPINEX_CORE/"*.dll "$ROOT/refs/game/BepInEx/core/"
 
-# Jotunn: match on the file name so a backslash path inside the archive still resolves.
-JOTUNN="$(find "$WORK/deps" -type f -iname '*jotunn.dll*' | head -1)"
+# Jotunn: match on a name ending in Jotunn.dll. A trailing wildcard would also match
+# Jotunn.dll.mdb, the Mono debug symbols, which copies cleanly and then fails to compile.
+JOTUNN="$(find "$WORK/deps" -type f -iname '*jotunn.dll' | head -1)"
 [ -n "$JOTUNN" ] || { echo "MISSING Jotunn.dll in fetched dependencies" >&2; exit 1; }
 cp "$JOTUNN" "$ROOT/refs/mods/Jotunn.dll"
 
@@ -73,11 +74,14 @@ for required in \
   "$ROOT/refs/game/BepInEx/core/BepInEx.dll" \
   "$ROOT/refs/game/BepInEx/core/0Harmony.dll" \
   "$ROOT/refs/mods/Jotunn.dll"; do
-  if [ -f "$required" ]; then
-    echo "ok   ${required#$ROOT/}"
-  else
+  if [ ! -f "$required" ]; then
     echo "MISSING ${required#$ROOT/}" >&2
     MISSING=1
+  elif [ "$(head -c2 "$required")" != "MZ" ]; then
+    echo "NOT AN ASSEMBLY ${required#$ROOT/} (no PE header)" >&2
+    MISSING=1
+  else
+    echo "ok   ${required#$ROOT/}"
   fi
 done
 [ "$MISSING" -eq 0 ] || exit 1
