@@ -1,0 +1,10 @@
+{
+  "name": "MineTogether",
+  "version_number": "0.1.0",
+  "website_url": "",
+  "description": "Always-on vein mining with a hotkey toggle, area-of-effect pickaxe swings, world resource multipliers and rock collapse in one mod.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2351",
+    "ValheimModding-Jotunn-2.30.2"
+  ]
+}
