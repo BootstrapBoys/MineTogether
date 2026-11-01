@@ -44,17 +44,22 @@ for dep in "${DEPS[@]}"; do
   if [ ! -d "$WORK/deps/$dep" ]; then
     mkdir -p "$WORK/deps"
     curl -sSL -o "$WORK/deps/$dep.zip" "https://gcdn.thunderstore.io/live/repository/packages/${dep}.zip"
-    unzip -q -o "$WORK/deps/$dep.zip" -d "$WORK/deps/$dep"
+    # Thunderstore packages built on Windows carry backslash separators; unzip reports that as a
+    # warning and exits 1, which would abort the job even though the files are there.
+    unzip -q -o "$WORK/deps/$dep.zip" -d "$WORK/deps/$dep" || true
   fi
 done
 
-# BepInEx core: the package nests it, so find it rather than assuming a path.
-BEPINEX_CORE="$(find "$WORK/deps" -type d -path '*BepInEx/core' | head -1)"
-[ -n "$BEPINEX_CORE" ] || { echo "MISSING BepInEx core in fetched dependencies" >&2; exit 1; }
+# BepInEx core: locate it by the assemblies we need rather than by the archive's folder layout,
+# which differs between packages and may use backslash separators.
+HARMONY="$(find "$WORK/deps" -type f -name '0Harmony.dll' | head -1)"
+[ -n "$HARMONY" ] || { echo "MISSING 0Harmony.dll in fetched dependencies" >&2; exit 1; }
+BEPINEX_CORE="$(dirname "$HARMONY")"
+echo "BepInEx core: ${BEPINEX_CORE#$WORK/}"
 cp "$BEPINEX_CORE/"*.dll "$ROOT/refs/game/BepInEx/core/"
 
-# Jotunn: a plain plugins/Jotunn.dll inside its package.
-JOTUNN="$(find "$WORK/deps" -name Jotunn.dll -type f | head -1)"
+# Jotunn: match on the file name so a backslash path inside the archive still resolves.
+JOTUNN="$(find "$WORK/deps" -type f -iname '*jotunn.dll*' | head -1)"
 [ -n "$JOTUNN" ] || { echo "MISSING Jotunn.dll in fetched dependencies" >&2; exit 1; }
 cp "$JOTUNN" "$ROOT/refs/mods/Jotunn.dll"
 
