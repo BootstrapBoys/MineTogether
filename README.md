@@ -65,7 +65,8 @@ UTC build time and sha256. `bin/` and `obj/` are removed by the script.
 | `tooling/build.sh` | release build, then cleans intermediate output |
 | `tooling/make-config.py` | regenerates the config template and asserts it matches the `Bind` calls |
 | `tooling/audit-targets.py` | flags patch targets that name an overloaded method (Harmony refuses those) |
-| `tooling/make-icon.py` | regenerates `resources/icon.png` |
+| `tooling/import-icon.py` | converts square art into the 256x256 store icon |
+| `tooling/make-icon.py` | drawn fallback icon, used when there is no art |
 
 ## Layout
 
