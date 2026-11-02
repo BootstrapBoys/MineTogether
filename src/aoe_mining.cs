@@ -36,27 +36,25 @@ namespace MineTogether
 
         internal static void Bind(ConfigFile config)
         {
-            const string section = "Server Settings";
-            ScaleWithSkill = config.Bind(section, "ScaleWithSkill", true,
-                "Grow the radius with the Pickaxes skill, from RadiusMin at skill 0 to RadiusMax at skill 100.");
-            RadiusMin = config.Bind(section, "RadiusMin", 1f,
+            const string section = "5. AOE Mining";
+            ScaleWithSkill = ServerConfig.Host(config.Bind(section, "ScaleWithSkill", true,
+                "Grow the AOE radius with the Pickaxes skill, from RadiusMin at skill 0 to RadiusMax at skill 100."));
+            RadiusMin = ServerConfig.Host(config.Bind(section, "RadiusMin", 1f,
                 new ConfigDescription("AOE radius in metres at Pickaxes 0 (or always, when ScaleWithSkill is off).",
-                    new AcceptableValueRange<float>(0.5f, 8f)));
-            RadiusMax = config.Bind(section, "RadiusMax", 4f,
+                    new AcceptableValueRange<float>(0.5f, 8f))));
+            RadiusMax = ServerConfig.Host(config.Bind(section, "RadiusMax", 4f,
                 new ConfigDescription("AOE radius in metres at Pickaxes 100.",
-                    new AcceptableValueRange<float>(0.5f, 10f)));
-            BonusDamage = config.Bind(section, "BonusDamage", 0f,
-                new ConfigDescription("Pickaxe damage added to the swing before it is divided between targets. " +
+                    new AcceptableValueRange<float>(0.5f, 10f))));
+            BonusDamage = ServerConfig.Host(config.Bind(section, "BonusDamage", 0f,
+                new ConfigDescription("Pickaxe damage added to the AOE swing before it is divided between targets. " +
                     "0 keeps a vanilla-strength swing.",
-                    new AcceptableValueRange<float>(0f, 50f)));
-            MaxTargets = config.Bind(section, "MaxTargets", 16,
-                new ConfigDescription("Most rocks one swing may spread damage over.",
-                    new AcceptableValueRange<int>(1, 32)));
-            AoeExcludedPrefabs = config.Bind(section, "AOEExcludedPrefabs", "blackmetal,obsidian,muddy,scrapiron",
+                    new AcceptableValueRange<float>(0f, 50f))));
+            MaxTargets = ServerConfig.Host(config.Bind(section, "MaxTargets", 16,
+                new ConfigDescription("Most rocks one AOE swing may spread damage over.",
+                    new AcceptableValueRange<int>(1, 32))));
+            AoeExcludedPrefabs = ServerConfig.Host(config.Bind(section, "AOEExcludedPrefabs", "blackmetal,obsidian,muddy,scrapiron",
                 "Comma-separated name fragments. A rock whose prefab or display name contains one of these " +
-                "is never hit by the area effect.");
-            // Parse once and cache the verdict per prefab: the old code split the string for every
-            // collider of every swing.
+                "is never hit by the AOE effect. Unrelated to ExcludedPrefabs, which filters deposits."));
             RebuildExclusions();
             AoeExcludedPrefabs.SettingChanged += (sender, args) => RebuildExclusions();
         }

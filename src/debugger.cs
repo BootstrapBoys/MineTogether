@@ -35,8 +35,6 @@ namespace MineTogether
         internal static int DropsScaled;
         internal static int Collapses;
         internal static int AoeSwings;
-        internal static int SyncApplied;
-        internal static int SyncRejected;
         internal static int Errors;
 
         internal static bool Enabled => _enabled != null && _enabled.Value;
@@ -48,7 +46,7 @@ namespace MineTogether
 
         internal static void Bind(ConfigFile config)
         {
-            _enabled = config.Bind("Debug", "Enable Debug", false,
+            _enabled = config.Bind("6. Debug", "Enable Debug", false,
                 "Write diagnostics to BepInEx/BSBLogs/MineTogether.log: environment, applied patches, " +
                 "resolved bindings, settings and what each module did. Errors are written even when this is off.");
         }
@@ -182,8 +180,9 @@ namespace MineTogether
             if (!Enabled) return;
             Write($"[State] {Switches.Describe()}");
             Write($"[Stats] sessions={SessionsStarted} completed={SessionsCompleted} stopped={SessionsStopped} " +
-                  $"drops={DropsScaled} collapses={Collapses} aoe={AoeSwings} " +
-                  $"sync={SyncApplied}/{SyncRejected} errors={Errors}");
+                  $"drops={DropsScaled} collapses={Collapses} aoe={AoeSwings} errors={Errors}");
+            Write($"[Sync] conditional-config-sync: locked={ServerConfig.Sync.IsLocked} " +
+                  $"sourceOfTruth={ServerConfig.Sync.IsSourceOfTruth} initialSync={ServerConfig.Sync.InitialSyncDone}");
         }
 
         private static string AssemblyLocation()

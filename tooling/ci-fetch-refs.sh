@@ -64,6 +64,11 @@ JOTUNN="$(find "$WORK/deps" -type f -iname '*jotunn.dll' | head -1)"
 [ -n "$JOTUNN" ] || { echo "MISSING Jotunn.dll in fetched dependencies" >&2; exit 1; }
 cp "$JOTUNN" "$ROOT/refs/mods/Jotunn.dll"
 
+# Conditional Config Sync: the API assembly only, not its bootstrap plugin.
+CCS="$(find "$WORK/deps" -type f -iname 'ConditionalConfigSync.dll' | head -1)"
+[ -n "$CCS" ] || { echo "MISSING ConditionalConfigSync.dll in fetched dependencies" >&2; exit 1; }
+cp "$CCS" "$ROOT/refs/mods/ConditionalConfigSync.dll"
+
 # ---------------------------------------------------------------- verify
 say "verify"
 MISSING=0
@@ -73,7 +78,8 @@ for required in \
   "$ROOT/refs/game/valheim_Data/Managed/UnityEngine.CoreModule.dll" \
   "$ROOT/refs/game/BepInEx/core/BepInEx.dll" \
   "$ROOT/refs/game/BepInEx/core/0Harmony.dll" \
-  "$ROOT/refs/mods/Jotunn.dll"; do
+  "$ROOT/refs/mods/Jotunn.dll" \
+  "$ROOT/refs/mods/ConditionalConfigSync.dll"; do
   if [ ! -f "$required" ]; then
     echo "MISSING ${required#$ROOT/}" >&2
     MISSING=1

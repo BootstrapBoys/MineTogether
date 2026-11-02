@@ -20,10 +20,6 @@ namespace MineTogether
         internal const string Manual = "MineTogether.Manual.v1";
         internal const string Move = "MineTogether.Move.v1";
 
-        internal const string SyncRequest = "MineTogether.SyncRequest.v1";
-        internal const string SyncApply = "MineTogether.SyncApply.v1";
-
-        internal const int SyncVersion = 5;
 
         internal const string MinersKey = "MineTogether.miners";
         internal const string NamesKey = "MineTogether.names";

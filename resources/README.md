@@ -6,27 +6,33 @@ Vein mining, world resource multipliers, rock collapse and area-of-effect mining
 
 ## Configuration
 
-Every module has a switch in `[General]`:
+The file is grouped by feature, with each module's switch first in its own section:
 
-- `Enabled` - master switch. Off leaves the mod loaded but inert.
-- `VeinMine` - vein mining, toggled in game with `ToggleKey` (default Alt+B).
-- `ResourceMultiplier` - world resource scaling.
-- `FallingDeposits` - rock collapse.
-- `AreaMining` - area-of-effect pickaxe swings.
+| section | holds |
+| :--- | :--- |
+| `[General]` | `Enabled` (master switch), `ToggleKey` |
+| `[Vein Mining]` | `VeinMine`, speed per extra player, the range that counts, deposit detection |
+| `[Resources]` | `ResourceMultiplier` and the four yield multipliers |
+| `[Rock Collapse]` | `FallingDeposits` and the footing thresholds |
+| `[AOE Mining]` | `AreaMining` and the radius, damage and exclusion tuning |
+| `[Debug]` | `Enable Debug` |
 
-`[Server Settings]` holds everything the host decides: deposit detection, mining speed, the four
-resource multipliers, the collapse rule and the AOE tuning. `[Debug]` holds the logging switch. A
-ready-made config ships in `resources/config/`.
+A ready-made config ships in `resources/config/`.
 
-## Server sync
+## Server ownership
 
-The host owns `[General] Enabled` and everything under `[Server Settings]`. Clients receive those
-values on join and again whenever the host changes one, so nobody plays by different rules.
-Nothing is written to a client's config file - the values live in memory for the session.
+Synchronisation is handled by [Conditional Config Sync](https://thunderstore.io/c/valheim/p/shudnal/ConditionalConfigSync/),
+a hard dependency. Every setting is registered with an explicit owner:
 
-Client-local settings stay local: the personal `VeinMine` toggle and its hotkey, plus `[Debug]`.
-The AOE effect itself is still applied by the attacker's game, so the host's radius and damage
-values are what honest clients use, but a modified client can ignore them.
+- **Server-owned** - the master switch, everything under `[Vein Mining]` except the personal
+  toggle, `[Resources]`, `[Rock Collapse]` and `[AOE Mining]`. These come from the host and are
+  locked on clients: they show the host's value and cannot be changed locally.
+- **Client-owned** - `ToggleKey`, `VeinMine` and `[Debug]`. These stay personal, and the hotkey
+  keeps working.
+
+The point is that the settings which decide yields, mining speed and collapse strength cannot be
+different for different players. AOE is applied by the attacker's game, so the host's values are
+what honest clients use, but a modified client can still ignore them.
 
 ## What it does
 
@@ -89,8 +95,8 @@ being treated as mineable.
 
 ## Install
 
-Server and every client: BepInEx 5.4.2351+ and Jotunn 2.30.2. Drop `MineTogether.dll` in
-`BepInEx/plugins/`. The server controls vein mining speed, the collapse settings and the
+Server and every client: BepInEx 5.4.2351+, Jotunn 2.30.2 and Conditional Config Sync 1.0.11.
+Drop `MineTogether.dll` in `BepInEx/plugins/`. The server controls vein mining speed, the collapse settings and the
 multipliers; clients control their own `ToggleKey` and AOE settings.
 
 ## Compatibility

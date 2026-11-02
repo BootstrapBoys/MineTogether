@@ -37,15 +37,15 @@ namespace MineTogether
 
         internal static void Bind(ConfigFile config)
         {
-            const string section = "Server Settings";
-            PercentFootingNeeded = config.Bind(section, "PercentFootingNeeded", 15,
+            const string section = "4. Rock Collapse";
+            PercentFootingNeeded = ServerConfig.Host(config.Bind(section, "PercentFootingNeeded", 15,
                 new ConfigDescription("How much of a rock's original footing must survive; mine past that and the " +
                     "whole rock drops. 0 turns the rule off.",
-                    new AcceptableValueRange<int>(0, 90)));
-            PercentSupportBoxSize = config.Bind(section, "PercentSupportBoxSize", 100,
+                    new AcceptableValueRange<int>(0, 90))));
+            PercentSupportBoxSize = ServerConfig.Host(config.Bind(section, "PercentSupportBoxSize", 100,
                 new ConfigDescription("Size of each piece's support box relative to the piece. Lower makes pieces " +
                     "fall sooner.",
-                    new AcceptableValueRange<int>(25, 150)));
+                    new AcceptableValueRange<int>(25, 150))));
         }
 
         [HarmonyPatch(typeof(MineRock5), "DamageArea")]

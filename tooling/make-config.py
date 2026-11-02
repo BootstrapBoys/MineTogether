@@ -19,66 +19,68 @@ NAME = "Mine Together"
 
 # section, key, type, default, acceptable, description  (bind order)
 ENTRIES = [
-    ("General", "Enabled", "Boolean", "true", None,
+    ("1. General", "Enabled", "Boolean", "true", None,
      "Enables/Disables the mod."),
-    ("General", "VeinMine", "Boolean", "true", None,
-     "Vein mining is always active while this is on. ToggleKey flips it at runtime."),
-    ("General", "ResourceMultiplier", "Boolean", "true", None,
-     "Scale world resources (mining, lumber, pickables, crates, dungeon loot)."),
-    ("General", "FallingDeposits", "Boolean", "true", None,
-     "Rock pieces fall once the deposit no longer rests on enough ground. Vanilla leaves them floating."),
-    ("General", "AreaMining", "Boolean", "true", None,
-     "Spread a pickaxe swing over the rocks around the impact point. Never runs while vein mining is active."),
-    ("General", "ToggleKey", "KeyboardShortcut", "B + LeftAlt", None,
-     "Hold Alt and press B to toggle vein mining on and off."),
+    ("1. General", "ToggleKey", "KeyboardShortcut", "B + LeftAlt", None,
+     "Hold Alt and press B to toggle vein mining on and off. Your own key."),
 
-    ("Server Settings", "AdditionalPrefabs", "String", "", None,
+    ("2. Vein Mining", "VeinMine", "Boolean", "true", None,
+     "Vein mining is always active while this is on. ToggleKey flips it at runtime."),
+    ("2. Vein Mining", "MiningSpeedMultiplierPerPlayer", "Single", "0.5", "From 0 to 5",
+     "Speed added per extra player. 100% is five times vanilla work per swing; 0.5 makes two "
+     "players 150% and three 200% of that. 0 turns the bonus off."),
+    ("2. Vein Mining", "MultiplierPlayerRange", "Single", "10", "From 1 to 64",
+     "Metres around the deposit in which a player counts towards MiningSpeedMultiplierPerPlayer."),
+    ("2. Vein Mining", "MaximumDistance", "Single", "6", "From 2 to 12",
+     "Maximum contributor distance to an exposed deposit collider."),
+    ("2. Vein Mining", "AdditionalPrefabs", "String", "", None,
      "Extra prefab names treated as ore deposits."),
-    ("Server Settings", "ExcludedPrefabs", "String", "MineRock_Tin", None,
+    ("2. Vein Mining", "ExcludedPrefabs", "String", "MineRock_Tin", None,
      "Exact prefab names, comma separated, that are never treated as ore deposits. "
      "Tin is excluded by default so vein mining leaves the small surface rocks alone."),
-    ("Server Settings", "MaximumDistance", "Single", "6", "From 2 to 12",
-     "Maximum contributor distance to an exposed deposit collider."),
-    ("Server Settings", "MiningSpeedMultiplierPerPlayer", "Single", "0.5", "From 0 to 5",
-     "Speed added per extra player. 100% is five times vanilla work per swing; 0.5 makes two "
-     "players 150% and three 200% of that. 0 turns the bonus off. Only the host/server value is used."),
-    ("Server Settings", "MultiplierPlayerRange", "Single", "10", "From 1 to 64",
-     "Metres around the deposit in which a player counts towards MiningSpeedMultiplierPerPlayer."),
 
-    ("Server Settings", "MiningMultiplier", "Single", "1", "From 1 to 10",
+    ("3. Resources", "ResourceMultiplier", "Boolean", "true", None,
+     "Scale world resources (mining, lumber, pickables, crates, dungeon loot)."),
+    ("3. Resources", "MiningMultiplier", "Single", "1", "From 1 to 10",
      "Multiplier for ore, stone and other mining node drops. 1 = vanilla."),
-    ("Server Settings", "LumberMultiplier", "Single", "1", "From 1 to 10",
+    ("3. Resources", "LumberMultiplier", "Single", "1", "From 1 to 10",
      "Multiplier for wood, fine wood, core wood and other tree drops. 1 = vanilla."),
-    ("Server Settings", "PickableMultiplier", "Single", "1", "From 1 to 10",
+    ("3. Resources", "PickableMultiplier", "Single", "1", "From 1 to 10",
      "Multiplier for hand-picked items (berries, mushrooms, flint, branches). 1 = vanilla."),
-    ("Server Settings", "StructureMultiplier", "Single", "1", "From 1 to 10",
+    ("3. Resources", "StructureMultiplier", "Single", "1", "From 1 to 10",
      "Multiplier for destructible crates and dungeon loot spawners. 1 = vanilla."),
 
-    ("Server Settings", "PercentFootingNeeded", "Int32", "15", "From 0 to 90",
+    ("4. Rock Collapse", "FallingDeposits", "Boolean", "true", None,
+     "Rock pieces fall once the deposit no longer rests on enough ground. Vanilla leaves them floating."),
+    ("4. Rock Collapse", "PercentFootingNeeded", "Int32", "15", "From 0 to 90",
      "How much of a rock's original footing must survive; mine past that and the whole rock drops. "
      "0 turns the rule off."),
-    ("Server Settings", "PercentSupportBoxSize", "Int32", "100", "From 25 to 150",
+    ("4. Rock Collapse", "PercentSupportBoxSize", "Int32", "100", "From 25 to 150",
      "Size of each piece's support box relative to the piece. Lower makes pieces fall sooner."),
 
-    ("Server Settings", "ScaleWithSkill", "Boolean", "true", None,
+    ("5. AOE Mining", "AreaMining", "Boolean", "true", None,
+     "Spread a pickaxe swing over the rocks around the impact point. Never runs while vein mining is active."),
+    ("5. AOE Mining", "ScaleWithSkill", "Boolean", "true", None,
      "Grow the AOE radius with the Pickaxes skill, from RadiusMin at skill 0 to RadiusMax at skill 100."),
-    ("Server Settings", "RadiusMin", "Single", "1", "From 0.5 to 8",
+    ("5. AOE Mining", "RadiusMin", "Single", "1", "From 0.5 to 8",
      "AOE radius in metres at Pickaxes 0 (or always, when ScaleWithSkill is off)."),
-    ("Server Settings", "RadiusMax", "Single", "4", "From 0.5 to 10",
+    ("5. AOE Mining", "RadiusMax", "Single", "4", "From 0.5 to 10",
      "AOE radius in metres at Pickaxes 100."),
-    ("Server Settings", "BonusDamage", "Single", "0", "From 0 to 50",
+    ("5. AOE Mining", "BonusDamage", "Single", "0", "From 0 to 50",
      "Pickaxe damage added to the AOE swing before it is divided between targets. "
      "0 keeps a vanilla-strength swing."),
-    ("Server Settings", "MaxTargets", "Int32", "16", "From 1 to 32",
+    ("5. AOE Mining", "MaxTargets", "Int32", "16", "From 1 to 32",
      "Most rocks one AOE swing may spread damage over."),
-    ("Server Settings", "AOEExcludedPrefabs", "String", "blackmetal,obsidian,muddy,scrapiron", None,
+    ("5. AOE Mining", "AOEExcludedPrefabs", "String", "blackmetal,obsidian,muddy,scrapiron", None,
      "Comma-separated name fragments. A rock whose prefab or display name contains one of these "
-     "is never hit by the AOE effect. Unrelated to ExcludedPrefabs above, which filters deposits."),
+     "is never hit by the AOE effect. Unrelated to ExcludedPrefabs, which filters deposits."),
 
-    ("Debug", "Enable Debug", "Boolean", "false", None,
+    ("6. Debug", "Enable Debug", "Boolean", "false", None,
      "Write diagnostics to BepInEx/BSBLogs/MineTogether.log: environment, applied patches, "
      "resolved bindings, settings and what each module did. Errors are written even when this is off."),
 ]
+
+
 def source_defaults():
     """Every config Bind in src/, as {(section, key): type}."""
     found = {}
@@ -109,7 +111,7 @@ def main():
             print(f"  in template, not in code: [{s}] {k}", file=sys.stderr)
         return 1
 
-    lines = [f"## Settings file was created by plugin {NAME} v0.1.1",
+    lines = [f"## Settings file was created by plugin {NAME} v0.2.0",
              f"## Plugin GUID: {GUID}",
              ""]
     section = None

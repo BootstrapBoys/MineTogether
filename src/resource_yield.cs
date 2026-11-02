@@ -43,23 +43,23 @@ namespace MineTogether
 
         internal static void Bind(ConfigFile config)
         {
-            const string section = "Server Settings";
+            const string section = "3. Resources";
 
-            MiningMultiplier = config.Bind(section, "MiningMultiplier", 1f,
+            MiningMultiplier = ServerConfig.Host(config.Bind(section, "MiningMultiplier", 1f,
                 new ConfigDescription("Multiplier for ore, stone and other mining node drops. 1 = vanilla.",
-                    new AcceptableValueRange<float>(1f, 10f)));
+                    new AcceptableValueRange<float>(1f, 10f))));
 
-            LumberMultiplier = config.Bind(section, "LumberMultiplier", 1f,
+            LumberMultiplier = ServerConfig.Host(config.Bind(section, "LumberMultiplier", 1f,
                 new ConfigDescription("Multiplier for wood, fine wood, core wood and other tree drops. 1 = vanilla.",
-                    new AcceptableValueRange<float>(1f, 10f)));
+                    new AcceptableValueRange<float>(1f, 10f))));
 
-            PickableMultiplier = config.Bind(section, "PickableMultiplier", 1f,
+            PickableMultiplier = ServerConfig.Host(config.Bind(section, "PickableMultiplier", 1f,
                 new ConfigDescription("Multiplier for hand-picked items (berries, mushrooms, flint, branches). 1 = vanilla.",
-                    new AcceptableValueRange<float>(1f, 10f)));
+                    new AcceptableValueRange<float>(1f, 10f))));
 
-            StructureMultiplier = config.Bind(section, "StructureMultiplier", 1f,
+            StructureMultiplier = ServerConfig.Host(config.Bind(section, "StructureMultiplier", 1f,
                 new ConfigDescription("Multiplier for destructible crates and dungeon loot spawners. 1 = vanilla.",
-                    new AcceptableValueRange<float>(1f, 10f)));
+                    new AcceptableValueRange<float>(1f, 10f))));
         }
 
         /// <summary>Tags run on every hit, so only a missing or changed category costs anything.</summary>

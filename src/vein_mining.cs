@@ -1634,7 +1634,8 @@ namespace MineTogether
 		}
 	}
 	
-	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.1.1")]
+	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.2.0")]
+	[BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("com.jotunn.jotunn", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("org.bepinex.plugins.mining", BepInDependency.DependencyFlags.SoftDependency)]
 	[NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Minor)]
@@ -1644,7 +1645,7 @@ namespace MineTogether
 
 		public const string Id = "com.bootstrapboys.minetogether";
 
-		public const string Version = "0.1.1";
+		public const string Version = "0.2.0";
 
 		internal static Plugin Instance;
 
@@ -1697,49 +1698,43 @@ namespace MineTogether
 			// Opened before anything else, so even a binding failure leaves a file naming the DLL
 			// that actually loaded. The switch state is added once the settings exist.
 			Diag.Open();
-			Diag.Bind(Config);
-			const string general = "General";
-			Enabled = Config.Bind(general, "Enabled", true, "Enables/Disables the mod.");
-			VeinMine = Config.Bind(general, "VeinMine", true, "Vein mining is always active while this is on. ToggleKey flips it at runtime.");
-			ResourceMultiplier = Config.Bind(general, "ResourceMultiplier", true, "Scale world resources (mining, lumber, pickables, crates, dungeon loot).");
-			FallingDeposits = Config.Bind(general, "FallingDeposits", true, "Rock pieces fall once the deposit no longer rests on enough ground. Vanilla leaves them floating.");
-			AreaMining = Config.Bind(general, "AreaMining", true, "Spread a pickaxe swing over the rocks around the impact point. Never runs while vein mining is active.");
-			ToggleKey = Config.Bind(general, "ToggleKey", new KeyboardShortcut(KeyCode.B, KeyCode.LeftAlt), "Hold Alt and press B to toggle vein mining on and off.");
-			Included = Config.Bind("Server Settings", "AdditionalPrefabs", "",
-				"Extra prefab names treated as ore deposits.");
-			Excluded = Config.Bind("Server Settings", "ExcludedPrefabs", "MineRock_Tin",
-				"Exact prefab names, comma separated, that are never treated as ore deposits. " +
-				"Tin is excluded by default so vein mining leaves the small surface rocks alone.");
-			Range = Config.Bind("Server Settings", "MaximumDistance", 6f,
-				new ConfigDescription("Maximum contributor distance to an exposed deposit collider.",
-					new AcceptableValueRange<float>(2f, 12f)));
-			SpeedPerPlayer = Config.Bind("Server Settings", "MiningSpeedMultiplierPerPlayer", 0.5f,
+			// Layout: one section per feature, the module's own switch first. Every entry is
+			// registered with Conditional Config Sync - Host() entries are the server's and are
+			// locked for clients, Local() entries stay the player's own.
+			Enabled = ServerConfig.Host(Config.Bind("1. General", "Enabled", true,
+				"Enables/Disables the mod."));
+			ToggleKey = ServerConfig.Local(Config.Bind("1. General", "ToggleKey",
+				new KeyboardShortcut(KeyCode.B, KeyCode.LeftAlt),
+				"Hold Alt and press B to toggle vein mining on and off."));
+
+			VeinMine = ServerConfig.Local(Config.Bind("2. Vein Mining", "VeinMine", true,
+				"Vein mining is always active while this is on. ToggleKey flips it at runtime."));
+			SpeedPerPlayer = ServerConfig.Host(Config.Bind("2. Vein Mining", "MiningSpeedMultiplierPerPlayer", 0.5f,
 				new ConfigDescription("Speed added per extra player. 0.5 means one player mines at 100% of the base rate, two at 150%, three at 200%. 0 turns the bonus off.",
-					new AcceptableValueRange<float>(0f, 5f)));
-			SpeedRange = Config.Bind("Server Settings", "MultiplierPlayerRange", 10f,
+					new AcceptableValueRange<float>(0f, 5f))));
+			SpeedRange = ServerConfig.Host(Config.Bind("2. Vein Mining", "MultiplierPlayerRange", 10f,
 				new ConfigDescription("Metres around the deposit in which a player counts towards MiningSpeedMultiplierPerPlayer.",
-					new AcceptableValueRange<float>(1f, 64f)));
-			Enabled.SettingChanged += OnSyncedSettingChanged;
-			Included.SettingChanged += OnSyncedSettingChanged;
-			Excluded.SettingChanged += OnSyncedSettingChanged;
-			Range.SettingChanged += OnSyncedSettingChanged;
-			SpeedPerPlayer.SettingChanged += OnSyncedSettingChanged;
-			SpeedRange.SettingChanged += OnSyncedSettingChanged;
+					new AcceptableValueRange<float>(1f, 64f))));
+			Range = ServerConfig.Host(Config.Bind("2. Vein Mining", "MaximumDistance", 6f,
+				new ConfigDescription("Maximum contributor distance to an exposed deposit collider.",
+					new AcceptableValueRange<float>(2f, 12f))));
+			Included = ServerConfig.Host(Config.Bind("2. Vein Mining", "AdditionalPrefabs", "",
+				"Extra prefab names treated as ore deposits."));
+			Excluded = ServerConfig.Host(Config.Bind("2. Vein Mining", "ExcludedPrefabs", "MineRock_Tin",
+				"Exact prefab names, comma separated, that are never treated as ore deposits. " +
+				"Tin is excluded by default so vein mining leaves the small surface rocks alone."));
+
+			ResourceMultiplier = ServerConfig.Host(Config.Bind("3. Resources", "ResourceMultiplier", true,
+				"Scale world resources (mining, lumber, pickables, crates, dungeon loot)."));
+			FallingDeposits = ServerConfig.Host(Config.Bind("4. Rock Collapse", "FallingDeposits", true,
+				"Rock pieces fall once the deposit no longer rests on enough ground. Vanilla leaves them floating."));
+			AreaMining = ServerConfig.Host(Config.Bind("5. AOE Mining", "AreaMining", true,
+				"Spread a pickaxe swing over the rocks around the impact point. Never runs while vein mining is active."));
+
 			ResourceYield.Bind(Config);
-			ResourceYield.MiningMultiplier.SettingChanged += OnSyncedSettingChanged;
-			ResourceYield.LumberMultiplier.SettingChanged += OnSyncedSettingChanged;
-			ResourceYield.PickableMultiplier.SettingChanged += OnSyncedSettingChanged;
-			ResourceYield.StructureMultiplier.SettingChanged += OnSyncedSettingChanged;
 			RockCollapse.Bind(Config);
-			RockCollapse.PercentFootingNeeded.SettingChanged += OnSyncedSettingChanged;
-			RockCollapse.PercentSupportBoxSize.SettingChanged += OnSyncedSettingChanged;
 			AoeMining.Bind(Config);
-			AoeMining.ScaleWithSkill.SettingChanged += OnSyncedSettingChanged;
-			AoeMining.RadiusMin.SettingChanged += OnSyncedSettingChanged;
-			AoeMining.RadiusMax.SettingChanged += OnSyncedSettingChanged;
-			AoeMining.BonusDamage.SettingChanged += OnSyncedSettingChanged;
-			AoeMining.MaxTargets.SettingChanged += OnSyncedSettingChanged;
-			AoeMining.AoeExcludedPrefabs.SettingChanged += OnSyncedSettingChanged;
+			Diag.Bind(Config);
 			Diag.State();
 			harmony = new Harmony("com.bootstrapboys.minetogether");
 			Diag.Trace("[Awake]", "harmony created");
@@ -1786,11 +1781,6 @@ namespace MineTogether
 			Diag.Trace("[Patch]", $"{applied} patch classes applied");
 		}
 
-		private static void OnSyncedSettingChanged(object sender, EventArgs e)
-		{
-			ServerSync.Broadcast();
-		}
-
 		private void Update()
 		{
 			Diag.TraceOnce("tick:plugin", "[Tick]", "plugin update running");
@@ -1800,13 +1790,11 @@ namespace MineTogether
 			{
 				Server.Shutdown("Mine Together is disabled on this server.");
 			}
-			ServerSync.Tick();
 			if (ZRoutedRpc.instance != bound)
 			{
 				bound = ZRoutedRpc.instance;
 				Server.Reset();
 				Client.Reset();
-				ServerSync.Reset();
 				if (bound != null)
 				{
 					Server.Register(bound);
@@ -2223,8 +2211,6 @@ namespace MineTogether
 			rpc.Register<ZPackage>(Protocol.Keep, (Action<long, ZPackage>)Keep);
 			rpc.Register<ZPackage>(Protocol.Manual, (Action<long, ZPackage>)Manual);
 			rpc.Register<ZPackage>(Protocol.Move, (Action<long, ZPackage>)Client.Retarget);
-			rpc.Register<ZPackage>(Protocol.SyncRequest, (Action<long, ZPackage>)ServerSync.OnRequest);
-			rpc.Register<ZPackage>(Protocol.SyncApply, (Action<long, ZPackage>)ServerSync.Apply);
 		}
 
 		private static void Manual(long sender, ZPackage pkg)
