@@ -2744,15 +2744,55 @@ namespace MineTogether
 			Total = total;
 		}
 
+		/// <summary>
+		/// Spends a swing on the vein, starting at the area the pickaxe struck.
+		///
+		/// Damage that is left after breaking an area carries into the next unbroken one, so a swing
+		/// worth 225 against 50-health areas clears four of them instead of one. Without the carry the
+		/// overkill was discarded, which made mining time equal to the area count and left the speed
+		/// multiplier with nothing to do on ordinary deposits.
+		/// </summary>
 		public int Apply(float damage, int preferred)
 		{
 			if (!Finite(damage) || damage <= 0f || Complete)
 			{
 				return -1;
 			}
-			int num = Next(preferred);
-			Remaining[num] = Math.Max(0f, Remaining[num] - damage);
-			return num;
+			int first = Next(preferred);
+			if (first < 0)
+			{
+				return -1;
+			}
+
+			float left = damage;
+			int index = first;
+			for (int visited = 0; visited < Remaining.Length && left > 0f; visited++)
+			{
+				float spend = Math.Min(left, Remaining[index]);
+				Remaining[index] -= spend;
+				left -= spend;
+				if (left <= 0f)
+				{
+					break;
+				}
+				// Walk forward and wrap, so a swing near the end of the vein still spends its damage.
+				int next = -1;
+				for (int step = 1; step <= Remaining.Length; step++)
+				{
+					int candidate = (index + step) % Remaining.Length;
+					if (Remaining[candidate] > 0f)
+					{
+						next = candidate;
+						break;
+					}
+				}
+				if (next < 0)
+				{
+					break;
+				}
+				index = next;
+			}
+			return first;
 		}
 
 		public int Next(int preferred)
