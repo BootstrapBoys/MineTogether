@@ -2029,6 +2029,7 @@ namespace MineTogether
 						Deposit deposit = Deposit.Find(id);
 						if (!(val != null) || deposit == null || deposit.Distance(((Component)val).transform.position) > Plugin.Instance.Range.Value)
 						{
+							Diag.Trace("[Vein]", $"start aborted: player={(val != null)} deposit={(deposit != null)} distance={(deposit != null && val != null ? deposit.Distance(((Component)val).transform.position).ToString("0.#") : "-")} range={Plugin.Instance.Range.Value}");
 							Reply(sender, id, 0L, "This deposit is unavailable or is not supported.");
 							return false;
 						}
@@ -2528,7 +2529,11 @@ namespace MineTogether
 			ZDOID val = ZDOID.None;
 			try
 			{
-				if (pkg.GetArray().Length <= 256 && pkg.ReadInt() == 1 && MiningCompatibility.Ready)
+				int bytes = pkg.GetArray().Length;
+				int version = pkg.ReadInt();
+				// A refusal here used to be silent, which made a bad packet look like a dead mod.
+				Diag.Trace("[Vein]", $"start packet: bytes={bytes} version={version} ready={MiningCompatibility.Ready}");
+				if (bytes <= 256 && version == 1 && MiningCompatibility.Ready)
 				{
 					val = pkg.ReadZDOID();
 					ZDOID val2 = pkg.ReadZDOID();
@@ -2541,8 +2546,13 @@ namespace MineTogether
 					}
 					else
 					{
+						Diag.Trace("[Vein]", $"start accepted for peer {sender}: {val}");
 						((MonoBehaviour)Plugin.Instance).StartCoroutine(StartAfterLoad(sender, val, val2));
 					}
+				}
+				else
+				{
+					Reply(sender, val, 0L, "Could not start shared mining. Update the mod on both sides.");
 				}
 			}
 			catch (Exception ex)
