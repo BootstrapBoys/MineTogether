@@ -1,0 +1,48 @@
+name: Publish to Hexium
+
+# Uploads an already-published GitHub release to Hexium. Kept separate from the tag build so a
+# missing token costs nothing and a republish never rebuilds the DLL.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Released version to publish (e.g. 0.2.0)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HEXIUM_API_TOKEN: ${{ secrets.HEXIUM_API_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the released package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release download "v${{ inputs.version }}" \
+            --pattern "MineTogether-v${{ inputs.version }}.zip" --dir dist
+          ls -l dist
+
+      - name: Warn if the token is absent
+        if: ${{ env.HEXIUM_API_TOKEN == '' }}
+        shell: bash
+        run: echo "::warning::HEXIUM_API_TOKEN is not configured; skipped Hexium upload."
+
+      - name: Publish to Hexium
+        if: ${{ env.HEXIUM_API_TOKEN != '' }}
+        shell: bash
+        env:
+          HEXIUM_TOKEN: ${{ env.HEXIUM_API_TOKEN }}
+          HEXIUM_NAMESPACE: BootstrapBoys
+          HEXIUM_COMMUNITY: valheim
+          HEXIUM_FILE: dist/MineTogether-v${{ inputs.version }}.zip
+        run: ./tooling/hexium-upload.sh
