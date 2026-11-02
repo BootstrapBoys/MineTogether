@@ -34,8 +34,9 @@ ENTRIES = [
 
     ("Server Settings", "AdditionalPrefabs", "String", "", None,
      "Extra prefab names treated as ore deposits."),
-    ("Server Settings", "ExcludedPrefabs", "String", "", None,
-     "Prefab names to ignore when detecting ore deposits."),
+    ("Server Settings", "ExcludedPrefabs", "String", "MineRock_Tin", None,
+     "Exact prefab names, comma separated, that are never treated as ore deposits. "
+     "Tin is excluded by default so vein mining leaves the small surface rocks alone."),
     ("Server Settings", "MaximumDistance", "Single", "6", "From 2 to 12",
      "Maximum contributor distance to an exposed deposit collider."),
     ("Server Settings", "MiningSpeedMultiplierPerPlayer", "Single", "0.5", "From 0 to 5",

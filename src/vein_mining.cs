@@ -1707,8 +1707,9 @@ namespace MineTogether
 			ToggleKey = Config.Bind(general, "ToggleKey", new KeyboardShortcut(KeyCode.B, KeyCode.LeftAlt), "Hold Alt and press B to toggle vein mining on and off.");
 			Included = Config.Bind("Server Settings", "AdditionalPrefabs", "",
 				"Extra prefab names treated as ore deposits.");
-			Excluded = Config.Bind("Server Settings", "ExcludedPrefabs", "",
-				"Prefab names to ignore when detecting ore deposits.");
+			Excluded = Config.Bind("Server Settings", "ExcludedPrefabs", "MineRock_Tin",
+				"Exact prefab names, comma separated, that are never treated as ore deposits. " +
+				"Tin is excluded by default so vein mining leaves the small surface rocks alone.");
 			Range = Config.Bind("Server Settings", "MaximumDistance", 6f,
 				new ConfigDescription("Maximum contributor distance to an exposed deposit collider.",
 					new AcceptableValueRange<float>(2f, 12f)));
