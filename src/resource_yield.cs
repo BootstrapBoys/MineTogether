@@ -83,11 +83,33 @@ namespace MineTogether
             _ => 1f,
         };
 
-        /// <summary>Scales the stack. Unity rounds to even on .5, so 1.5x on a stack of 3 lands on 4, not 5.</summary>
+        /// <summary>
+        /// The whole part of the multiplier is guaranteed; the fraction is a weighted coin flip, so
+        /// 1.5x on one item gives two items half the time instead of two every time. Averages are
+        /// exactly the configured multiplier without ever rounding a player's half up on every drop.
+        /// </summary>
+        private static int Extra(int amount, float multiplier)
+        {
+            if (amount <= 0 || multiplier <= 1f) return 0;
+            float exact = amount * (multiplier - 1f);
+            int whole = Mathf.FloorToInt(exact);
+            float fraction = exact - whole;
+            if (fraction > 0f && UnityEngine.Random.value < fraction) whole++;
+            return whole;
+        }
+
+        /// <summary>Total items this drop should carry, before the stack-size split.</summary>
         private static int Scale(int amount, float multiplier)
         {
-            if (amount <= 0 || multiplier <= 1f) return amount;
-            return Mathf.Max(1, Mathf.RoundToInt(amount * multiplier));
+            if (amount <= 0) return amount;
+            return Mathf.Max(1, amount + Extra(amount, multiplier));
+        }
+
+        /// <summary>A stack is legal only up to the item's own limit.</summary>
+        private static int MaxStack(ItemDrop drop)
+        {
+            ItemDrop.ItemData.SharedData shared = drop != null && drop.m_itemData != null ? drop.m_itemData.m_shared : null;
+            return shared != null ? shared.m_maxStackSize : 0;
         }
 
         // ---- tag the owner's DropTable right before it generates its list -------------------
@@ -160,44 +182,92 @@ namespace MineTogether
         [HarmonyPatch(typeof(ItemDrop), nameof(ItemDrop.OnCreateNew), new Type[] { typeof(ItemDrop), typeof(bool) })]
         private static class ScaleOnSpawn
         {
+            // Dropping a second object re-enters OnCreateNew in the same frame; without this the
+            // spill would multiply its own output again.
+            private static bool spilling;
+
             // OnCreateNew is static, so the first argument is injected positionally: __instance is
             // null here and using it silently skipped every drop.
             private static void Postfix(ItemDrop __0)
             {
+                if (spilling) return;
                 if (Time.frameCount != _pendingFrame) return;
                 if (_pendingMultiplier <= 1f) return;
                 if (__0 == null || __0.m_itemData == null) return;
 
                 int before = __0.m_itemData.m_stack;
-                __0.m_itemData.m_stack = Scale(before, _pendingMultiplier);
-                Diag.TraceOnce("yield:spawn:" + _pendingMultiplier + ":" + before,
-                    "[Yield]", $"stack {before} -> {__0.m_itemData.m_stack} (x{_pendingMultiplier:0.##})");
+                int total = Scale(before, _pendingMultiplier);
+                int limit = MaxStack(__0);
+                if (limit <= 0 || total <= limit)
+                {
+                    __0.m_itemData.m_stack = total;
+                    Diag.TraceOnce("yield:spawn:" + _pendingMultiplier + ":" + before,
+                        "[Yield]", $"stack {before} -> {total} (x{_pendingMultiplier:0.##})");
+                    return;
+                }
+
+                __0.m_itemData.m_stack = limit;
+                Spill(__0, total - limit, limit);
+                Diag.TraceOnce("yield:spill:" + _pendingMultiplier + ":" + before,
+                    "[Yield]", $"{before} x{_pendingMultiplier:0.##} = {total}: stack {limit} + {total - limit} spilled");
+            }
+
+            /// <summary>
+            /// Emits the remainder as extra drops with legal stacks. DropItem is used rather than
+            /// Instantiate because only it creates the ZDO the world needs to own the object.
+            /// </summary>
+            private static void Spill(ItemDrop source, int remaining, int limit)
+            {
+                var data = source.m_itemData;
+                if (data == null || data.m_dropPrefab == null)
+                {
+                    // Without a drop prefab the remainder cannot be spawned; keep it on the stack
+                    // rather than silently deleting items.
+                    source.m_itemData.m_stack = limit + remaining;
+                    Diag.Error("[Yield]", "spill skipped: drop prefab missing");
+                    return;
+                }
+
+                spilling = true;
+                try
+                {
+                    Vector3 origin = source.transform.position;
+                    for (int guard = 0; remaining > 0 && guard < 64; guard++)
+                    {
+                        int amount = Mathf.Min(limit, remaining);
+                        Vector2 offset = UnityEngine.Random.insideUnitCircle * 0.4f;
+                        ItemDrop.DropItem(data, amount, origin + new Vector3(offset.x, 0.1f, offset.y),
+                            Quaternion.identity);
+                        remaining -= amount;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Diag.Error("[Yield]", "spill failed: " + ex.Message);
+                }
+                finally
+                {
+                    spilling = false;
+                }
             }
         }
 
-        // ---- pickables carry their amount, not a DropTable --------------------------------
+        // ---- pickables drop one object per item, so the stack is the thing to scale ----------
+        //
+        // Scaling the RPC's bonus argument only covered m_amount; a pickable with a bonus table
+        // (flint hands out 1 + 2) kept its extra drops at vanilla size, so 3x gave 5 items instead
+        // of 9. Drop() is the single point every pickable item passes through, main or bonus, so the
+        // stack is scaled there and the count stays vanilla.
 
-        [HarmonyPatch(typeof(Pickable), "RPC_Pick")]
-        private static class ScalePickable
+        [HarmonyPatch(typeof(Pickable), "Drop")]
+        private static class ScalePickableDrop
         {
-            private static void Prefix(Pickable __instance, ref int bonus)
+            private static void Prefix(ref int stack)
             {
-                if (!Switches.Resources) return;
+                if (!Switches.Resources || stack <= 0) return;
                 float multiplier = PickableMultiplier.Value;
                 if (multiplier <= 1f) return;
-                if (__instance == null || __instance.m_itemPrefab == null) return;
-
-                int baseAmount = __instance.m_dontScale
-                    ? __instance.m_amount
-                    : Mathf.Max(__instance.m_minAmountScaled,
-                        Game.instance != null
-                            ? Game.instance.ScaleDrops(__instance.m_itemPrefab, __instance.m_amount)
-                            : __instance.m_amount);
-
-                // Round the boosted total, not the delta, so a fractional multiplier behaves the
-                // same here as it does on node drops (1.5x on one berry gives two, not one).
-                int boosted = Mathf.Max(1, Mathf.RoundToInt(baseAmount * multiplier));
-                bonus += Mathf.Max(0, boosted - baseAmount);
+                stack = Scale(stack, multiplier);
             }
         }
     }
