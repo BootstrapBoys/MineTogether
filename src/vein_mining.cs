@@ -2124,6 +2124,22 @@ namespace MineTogether
 		/// from within MultiplierPlayerRange. Only the host computes this; clients read the value
 		/// written to the deposit.
 		/// </summary>
+		/// <summary>
+		/// The work factor for a given miner count. Pure, so the harness can assert the curve
+		/// without a session: 1 -> 5 (100%), 2 -> 7.5 (150%), 3 -> 10 (200%).
+		/// </summary>
+		internal static float SpeedFor(int miners)
+		{
+			float perPlayer = Plugin.Instance != null ? Plugin.Instance.SpeedPerPlayer.Value : 0.5f;
+			return BaseWork * (1f + Mathf.Max(0, miners - 1) * perPlayer);
+		}
+
+		/// <summary>The same curve as the HUD shows it: 1x, 1.5x, 2x.</summary>
+		internal static float RatioFor(int miners)
+		{
+			return SpeedFor(miners) / BaseWork;
+		}
+
 		/// <summary>The HUD figure: 1x for a single miner, 1.5x for two, relative to the baseline.</summary>
 		internal static float SpeedRatio(ZDOID target)
 		{
@@ -2141,7 +2157,7 @@ namespace MineTogether
 			if (miners.Length == 0) return BaseWork;
 
 			ZDO centre = ZDOMan.instance != null ? ZDOMan.instance.GetZDO(target) : null;
-			if (centre == null) return BaseWork * (1f + Mathf.Max(0, miners.Length - 1) * perPlayer);
+			if (centre == null) return SpeedFor(miners.Length);
 
 			Vector3 origin = centre.GetPosition();
 			float range = plugin.SpeedRange.Value;
@@ -2152,8 +2168,7 @@ namespace MineTogether
 				if (player == null || Vector3.Distance(player.GetPosition(), origin) <= range) counted++;
 			}
 			// 100% is BaseWork times vanilla; each extra miner adds perPlayer of that baseline.
-			int extra = Mathf.Max(0, counted - 1);
-			return BaseWork * (1f + extra * perPlayer);
+			return SpeedFor(counted);
 		}
 
 		internal static void UpdateActivity()

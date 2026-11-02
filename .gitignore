@@ -4,3 +4,4 @@ bin/
 obj/
 *.user
 .ci/
+local_config/
