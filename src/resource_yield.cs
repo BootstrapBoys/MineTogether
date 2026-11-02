@@ -36,7 +36,10 @@ namespace MineTogether
         private static readonly ConditionalWeakTable<DropTable, StrongBox<Kind>> Tags =
             new ConditionalWeakTable<DropTable, StrongBox<Kind>>();
 
-        private static readonly HashSet<int> Seen = new HashSet<int>();
+        // DropTable.GetDropList() hands out prefab references, so the postfix only *records* the
+        // multiplier for this frame; the stack is scaled on the instantiated clone, see ScaleOnSpawn.
+        private static int _pendingFrame = -1;
+        private static float _pendingMultiplier = 1f;
 
         internal static void Bind(ConfigFile config)
         {
@@ -141,22 +144,34 @@ namespace MineTogether
                 float multiplier = Multiplier(tag.Value);
                 if (multiplier <= 1f) return;
                 Diag.DropsScaled++;
+                _pendingFrame = Time.frameCount;
+                _pendingMultiplier = multiplier;
+            }
+        }
 
-                // CLLC's gathering multiplier duplicates the same GameObject reference in this list.
-                // Scaling per entry would then compound (x2 listed twice becomes x4), so scale each
-                // instance once no matter how often it appears.
-                Seen.Clear();
-                for (int i = 0; i < __result.Count; i++)
-                {
-                    GameObject drop = __result[i];
-                    if (drop == null) continue;
-                    if (!Seen.Add(drop.GetInstanceID())) continue;
-                    ItemDrop itemDrop = drop.GetComponent<ItemDrop>();
-                    if (itemDrop == null) continue;
-                    ItemDrop.ItemData data = itemDrop.m_itemData;
-                    if (data == null || data.m_shared == null) continue;
-                    data.m_stack = Scale(data.m_stack, multiplier);
-                }
+        // ---- scale the clone, once, on the frame the list was generated ---------------------
+
+        /// <summary>
+        /// Every drop path instantiates the listed prefabs and hands the clone to
+        /// <see cref="ItemDrop.OnCreateNew"/>. Scaling here touches that instance only: the prefab's
+        /// shared ItemData is never written, so a node whose areas break one at a time no longer
+        /// multiplies the table again on each area (which compounded 2x into 2^30 per node).
+        /// </summary>
+        [HarmonyPatch(typeof(ItemDrop), nameof(ItemDrop.OnCreateNew), new Type[] { typeof(ItemDrop), typeof(bool) })]
+        private static class ScaleOnSpawn
+        {
+            // OnCreateNew is static, so the first argument is injected positionally: __instance is
+            // null here and using it silently skipped every drop.
+            private static void Postfix(ItemDrop __0)
+            {
+                if (Time.frameCount != _pendingFrame) return;
+                if (_pendingMultiplier <= 1f) return;
+                if (__0 == null || __0.m_itemData == null) return;
+
+                int before = __0.m_itemData.m_stack;
+                __0.m_itemData.m_stack = Scale(before, _pendingMultiplier);
+                Diag.TraceOnce("yield:spawn:" + _pendingMultiplier + ":" + before,
+                    "[Yield]", $"stack {before} -> {__0.m_itemData.m_stack} (x{_pendingMultiplier:0.##})");
             }
         }
 
