@@ -108,7 +108,7 @@ def main():
             print(f"  in template, not in code: [{s}] {k}", file=sys.stderr)
         return 1
 
-    lines = [f"## Settings file was created by plugin {NAME} v0.1.0",
+    lines = [f"## Settings file was created by plugin {NAME} v0.1.1",
              f"## Plugin GUID: {GUID}",
              ""]
     section = None

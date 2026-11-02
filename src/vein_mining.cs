@@ -1634,7 +1634,7 @@ namespace MineTogether
 		}
 	}
 	
-	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.1.0")]
+	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.1.1")]
 	[BepInDependency("com.jotunn.jotunn", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("org.bepinex.plugins.mining", BepInDependency.DependencyFlags.SoftDependency)]
 	[NetworkCompatibility(CompatibilityLevel.EveryoneMustHaveMod, VersionStrictness.Minor)]
@@ -1644,7 +1644,7 @@ namespace MineTogether
 
 		public const string Id = "com.bootstrapboys.minetogether";
 
-		public const string Version = "0.1.0";
+		public const string Version = "0.1.1";
 
 		internal static Plugin Instance;
 
