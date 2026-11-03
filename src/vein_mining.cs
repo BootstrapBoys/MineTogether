@@ -2036,8 +2036,34 @@ namespace MineTogether
 					_state = -1;
 					try
 					{
-						Player val = PlayerFor(sender, playerId);
-						Deposit deposit = Deposit.Find(id);
+						// A deposit or player the server has not instantiated yet is transient - the
+						// client used to be told "not supported or too far away" on its first swing
+						// simply because the object appeared a frame later. Try to load it for about
+						// two seconds before refusing.
+						const int LoadRetries = 8;
+						Player val = null;
+						Deposit deposit = null;
+						for (int attempt = 0; attempt <= LoadRetries; attempt++)
+						{
+							EnsureLoaded(playerId, player: true, sender);
+							EnsureLoaded(id, player: false, sender);
+							val = PlayerFor(sender, playerId);
+							deposit = Deposit.Find(id);
+							ZDO playerZdo = ZDOMan.instance.GetZDO(playerId);
+							ZDO depositZdo = ZDOMan.instance.GetZDO(id);
+							if (val != null && deposit != null && playerZdo != null && depositZdo != null &&
+							    playerZdo.GetOwner() == sender &&
+							    Vector3.Distance(playerZdo.GetPosition(), depositZdo.GetPosition()) <= 80f)
+							{
+								break;
+							}
+							if (attempt < LoadRetries)
+							{
+								_current = new WaitForSeconds(0.25f);
+								_state = 1;
+								return true;
+							}
+						}
 						if (!(val != null) || deposit == null || deposit.Distance(((Component)val).transform.position) > Plugin.Instance.Range.Value)
 						{
 							Diag.Trace("[Vein]", $"start aborted: player={(val != null)} deposit={(deposit != null)} distance={(deposit != null && val != null ? deposit.Distance(((Component)val).transform.position).ToString("0.#") : "-")} range={Plugin.Instance.Range.Value}");
@@ -2550,7 +2576,7 @@ namespace MineTogether
 					ZDOID val2 = pkg.ReadZDOID();
 					ZDO zDO = ZDOMan.instance.GetZDO(val2);
 					ZDO zDO2 = ZDOMan.instance.GetZDO(val);
-					if (zDO == null || zDO2 == null || zDO.GetOwner() != sender || Vector3.Distance(zDO.GetPosition(), zDO2.GetPosition()) > 80f || !EnsureLoaded(val2, player: true, sender) || !EnsureLoaded(val, player: false, sender))
+					if (zDO == null || zDO2 == null || zDO.GetOwner() != sender || Vector3.Distance(zDO.GetPosition(), zDO2.GetPosition()) > 80f)
 					{
 						Diag.Trace("[Vein]", $"start refused for peer {sender}: unsupported or too far");
 						Reply(sender, val, 0L, "This deposit is not supported or is too far away.");

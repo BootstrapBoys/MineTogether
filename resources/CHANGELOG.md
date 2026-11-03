@@ -2,6 +2,9 @@
 
 ## 0.2.1
 
+- The first swing at a deposit the server has not spawned yet no longer fails with "This deposit
+  is not supported or is too far away": the server retries the load for up to two seconds before
+  refusing, so a rock that appears a frame late no longer needs a second swing.
 - Breaking a piece with ordinary damage (a plain swing or an AOE hit) no longer finishes the whole
   vein. Completing through that path used to call the same "destroy everything left" routine as a
   finished shared session, so one broken piece could pop an entire deposit that was only part-mined.
