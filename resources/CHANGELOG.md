@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+- Mining no longer pauses the instant it starts on a large rock: the walk-away check measured from
+  the deposit's ZDO origin, which can be well outside reach on a big formation, so a session that
+  began at arm's length was stopped on the next frame. It now measures to the nearest exposed
+  collider, the same way the server does, four times a second.
+
 ## 0.2.0
 
 - Settings are grouped by feature, one section per module with its switch first.

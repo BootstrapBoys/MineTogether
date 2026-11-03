@@ -136,6 +136,8 @@ namespace MineTogether
 
 		private static bool pending;
 
+		private static float pauseCheckAt;
+
 		private static ItemDrop.ItemData? tool;
 
 		private static Attack? attack;
@@ -264,11 +266,25 @@ namespace MineTogether
 			{
 				Stop("Mining stopped. Shared progress has been saved.");
 			}
-			if (Running && TargetView() is ZNetView watched && watched.GetZDO() != null &&
-			    Vector3.Distance(((Component)localPlayer).transform.position, watched.GetZDO().GetPosition()) >
-			    Plugin.Instance.Range.Value + 2f)
+			// Distance to the deposit's nearest exposed collider, not its ZDO origin: a large rock
+			// formation has its centre far from where the player stands, so an origin-based check
+			// paused sessions on the same swing that started them (seen on rock4_forest_frac).
+			if (Running && Time.time >= pauseCheckAt)
 			{
-				Stop("Mining paused.");
+				// Four times a second is plenty for a walk-away check and keeps the per-area collider
+				// maths off the frame budget of a large deposit.
+				pauseCheckAt = Time.time + 0.25f;
+				Deposit? live = Deposit.Find(Target);
+				Vector3 here = ((Component)localPlayer).transform.position;
+				float gap = live != null
+					? live.Distance(here)
+					: (TargetView() is ZNetView watched && watched.GetZDO() != null
+						? Vector3.Distance(here, watched.transform.position)
+						: 0f);
+				if (live != null && gap > Plugin.Instance.Range.Value + 2f)
+				{
+					Stop("Mining paused.");
+				}
 			}
 			if (Running && (Object)TargetView() == (Object)null)
 			{
@@ -1634,7 +1650,7 @@ namespace MineTogether
 		}
 	}
 	
-	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.2.0")]
+	[BepInPlugin("com.bootstrapboys.minetogether", "Mine Together", "0.2.1")]
 	[BepInDependency("_shudnal.ConditionalConfigSync", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("com.jotunn.jotunn", BepInDependency.DependencyFlags.HardDependency)]
 	[BepInDependency("org.bepinex.plugins.mining", BepInDependency.DependencyFlags.SoftDependency)]
@@ -1645,7 +1661,7 @@ namespace MineTogether
 
 		public const string Id = "com.bootstrapboys.minetogether";
 
-		public const string Version = "0.2.0";
+		public const string Version = "0.2.1";
 
 		internal static Plugin Instance;
 
