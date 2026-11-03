@@ -1173,16 +1173,11 @@ namespace MineTogether
 				deposit.Save(workLedger);
 				if (workLedger.Complete)
 				{
-					ZDOID uid = deposit.Data.m_uid;
-					if (deposit.Health.Any((float h) => h > 0f))
-					{
-						deposit.Finish(s.Hit);
-					}
-					else
-					{
-						deposit.Data.Set(Protocol.Active, false);
-					}
-					Server.Completed(uid);
+					// Completing through ordinary damage means the game has already broken the pieces
+					// itself. Finishing here would destroy everything still standing, which is how a
+					// single AOE hit used to pop an entire vein.
+					deposit.Data.Set(Protocol.Active, false);
+					Server.Completed(deposit.Data.m_uid);
 				}
 			}
 			catch (Exception ex)
@@ -2822,9 +2817,13 @@ namespace MineTogether
 
 		public void ReconcileNative(float[] before, float[] after)
 		{
-			if (before.Length != Remaining.Length || after.Length != Remaining.Length || before.Any((float x) => !Finite(x) || x < 0f) || after.Any((float x) => !Finite(x) || x < 0f))
+			// A mismatched array means the deposit changed shape mid-hit (broken area, stage swap).
+			// Refusing to reconcile leaves the ledger alone, which is safe; throwing would abandon
+			// the rest of the update half-applied.
+			if (before.Length != Remaining.Length || after.Length != Remaining.Length ||
+			    before.Any((float x) => !Finite(x) || x < 0f) || after.Any((float x) => !Finite(x) || x < 0f))
 			{
-				throw new ArgumentException("Invalid native health snapshot");
+				return;
 			}
 			for (int i = 0; i < Remaining.Length; i++)
 			{

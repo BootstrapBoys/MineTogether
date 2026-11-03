@@ -2,6 +2,10 @@
 
 ## 0.2.1
 
+- Breaking a piece with ordinary damage (a plain swing or an AOE hit) no longer finishes the whole
+  vein. Completing through that path used to call the same "destroy everything left" routine as a
+  finished shared session, so one broken piece could pop an entire deposit that was only part-mined.
+  The ledger now just records what the game did and deactivates the deposit when it is exhausted.
 - Mining no longer pauses the instant it starts on a large rock: the walk-away check measured from
   the deposit's ZDO origin, which can be well outside reach on a big formation, so a session that
   began at arm's length was stopped on the next frame. It now measures to the nearest exposed
